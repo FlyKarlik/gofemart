@@ -25,6 +25,10 @@ clean:
 lint:
 	golangci-lint run ./... --fix
 
+.PHONY: swag-generate
+swag-generate:
+	swag init -g ./cmd/gofemart/main.go
+
 .PHONY: migrate_all_up migrate_all_down migrate_force migrate_version migrate_up migrate_down
 migrate_all_up:
 	migrate -database ${INFRA__POSTGRES__CONN_STR} -path /migrations up
