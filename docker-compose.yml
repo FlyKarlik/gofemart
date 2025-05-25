@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  gofemart:
+    env_file:
+      - ./.env
+    container_name: gofemart
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    entrypoint: ["/gofemart-service"]
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - jaeger
+    networks:
+      - gofemart-network
+
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: gofemart
+    restart: unless-stopped
+    depends_on:
+      - migrator
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - gofemart-network
+
+  redis:
+   container_name: redis
+   image: redis:7-alpine
+   ports:
+     - "6379:6379"
+   volumes:
+     - ./redisdata:/data
+   restart: unless-stopped
+   command: redis-server --save 60 1 --loglevel warning
+   environment:
+     REDIS_PASSWORD: 123456
+   networks:
+     - gofemart-network
+
+  migrator:
+    env_file:
+      - ./.env
+    container_name: migrator
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/migrator-service","up"]
+    restart: on-failure
+    networks:
+      - gofemart-network
+
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/all-in-one:latest 
+    ports:
+      - "6831:6831/udp"      
+      - "6832:6832/udp"    
+      - "16686:16686"      
+      - "4317:4317"       
+      - "4318:4318"          
+      - "9411:9411"        
+    environment:
+      - SPAN_STORAGE_TYPE=memory 
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
+    networks:
+      - gofemart-network
+
+
+networks:
+  gofemart-network: {}

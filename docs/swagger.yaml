@@ -1,0 +1,397 @@
+basePath: /api
+definitions:
+  model.OrderStatusEnum:
+    enum:
+    - NEW
+    - PROCESSING
+    - INVALID
+    - PROCESSED
+    type: string
+    x-enum-varnames:
+    - OrderStatusEnumNew
+    - OrderStatusEnumProcessing
+    - OrderStatusEnumInvalid
+    - OrderStatusEnumProcessed
+  model.UserInput:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  model.UserOrder:
+    properties:
+      accural:
+        type: integer
+      id:
+        type: string
+      number:
+        type: string
+      status:
+        $ref: '#/definitions/model.OrderStatusEnum'
+      uploaded_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.UserOrderInput:
+    properties:
+      number:
+        type: string
+      status:
+        $ref: '#/definitions/model.OrderStatusEnum'
+      userID:
+        type: string
+    required:
+    - number
+    type: object
+  response.BaseResponseAny:
+    properties:
+      code:
+        type: integer
+      data: {}
+      error:
+        type: string
+      status:
+        type: boolean
+    type: object
+  response.BaseResponseBalance:
+    properties:
+      code:
+        type: integer
+      data:
+        $ref: '#/definitions/response.UserBalanceBalance'
+      error:
+        type: string
+      status:
+        type: boolean
+    type: object
+  response.BaseResponseLogin:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          token:
+            type: string
+        type: object
+      error:
+        type: string
+      status:
+        type: boolean
+    type: object
+  response.BaseResponseOrders:
+    properties:
+      code:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.UserOrder'
+        type: array
+      error:
+        type: string
+      status:
+        type: boolean
+    type: object
+  response.BaseResponseWithdrawals:
+    properties:
+      code:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/response.UserWithdrawalData'
+        type: array
+      error:
+        type: string
+      status:
+        type: boolean
+    type: object
+  response.UserBalanceBalance:
+    properties:
+      current:
+        type: number
+      user_id:
+        type: string
+      withdrawn:
+        type: number
+    type: object
+  response.UserWithdrawalData:
+    properties:
+      id:
+        type: string
+      order_number:
+        type: string
+      processed_at:
+        type: string
+      sum:
+        type: number
+      user_id:
+        type: string
+    type: object
+  response.WitdrawalUserBalanceInput:
+    properties:
+      order_number:
+        type: string
+      sum:
+        type: number
+    required:
+    - order_number
+    - sum
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: nikitasavin191@gmail.com
+    name: API Support
+    url: https://github.com/FlyKarlik/gofemart
+  description: API documentation for the GoFemart backend service.
+  title: GoFemart API
+  version: "1.0"
+paths:
+  /api/user/balance:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current balance and total amount withdrawn by the
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with balance data
+          schema:
+            $ref: '#/definitions/response.BaseResponseBalance'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+      security:
+      - BearerAuth: []
+      summary: Get user balance
+      tags:
+      - Balance
+  /api/user/balance/withdraw:
+    post:
+      consumes:
+      - application/json
+      description: Deducts the specified amount from the user's balance for the given
+        order
+      parameters:
+      - description: Withdrawal request
+        in: body
+        name: withdrawal
+        required: true
+        schema:
+          $ref: '#/definitions/response.WitdrawalUserBalanceInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Withdrawal successful
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "402":
+          description: Insufficient funds
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "422":
+          description: Invalid order number format
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+      security:
+      - BearerAuth: []
+      summary: Withdraw user balance
+      tags:
+      - Balance
+  /api/user/login:
+    post:
+      consumes:
+      - application/json
+      description: Verifies user credentials and returns JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful authentication
+          schema:
+            $ref: '#/definitions/response.BaseResponseLogin'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "401":
+          description: Authentication failed
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+      summary: Authenticate user
+      tags:
+      - Authentication
+  /api/user/orders:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all orders uploaded by the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with orders
+          schema:
+            $ref: '#/definitions/response.BaseResponseOrders'
+        "204":
+          description: No orders found for user
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+      security:
+      - BearerAuth: []
+      summary: Get user's orders
+      tags:
+      - Orders
+    post:
+      consumes:
+      - application/json
+      description: Accepts a plain text order number and processes it
+      parameters:
+      - description: Order number
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserOrderInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order already uploaded by this user
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "202":
+          description: New order accepted for processing
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "409":
+          description: Order already uploaded by another user
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "422":
+          description: Invalid order number format
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+      security:
+      - BearerAuth: []
+      summary: Upload user order
+      tags:
+      - Orders
+  /api/user/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account
+      parameters:
+      - description: Registration data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully processed request
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "400":
+          description: Bad request - invalid input params
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "409":
+          description: Conflict - user login in use
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "500":
+          description: Internal system error
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+      summary: User registration
+      tags:
+      - Authentication
+  /api/user/withdrawals:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of all user's balance withdrawals
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with withdrawal history
+          schema:
+            $ref: '#/definitions/response.BaseResponseWithdrawals'
+        "204":
+          description: No withdrawals found
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.BaseResponseAny'
+      security:
+      - BearerAuth: []
+      summary: Get user withdrawals
+      tags:
+      - Balance
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
